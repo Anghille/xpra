@@ -1050,6 +1050,7 @@ cdef class RandRBindingsInstance(X11CoreBindingsInstance):
     def set_crtc_config(self, monitor_defs: Dict) -> None:
         self.context_check("set_crtc_config")
         log(f"set_crtc_config({monitor_defs})")
+        log.info(f"set_crtc_config({monitor_defs})")
         def dpi96(v):
             return round(v * 25.4 / 96)
         #first, find the total screen area:
@@ -1059,6 +1060,7 @@ cdef class RandRBindingsInstance(X11CoreBindingsInstance):
             screen_w = max(screen_w, x+width)
             screen_h = max(screen_h, y+height)
         log(f"total screen area is: {screen_w}x{screen_h}")
+        log.info(f"total screen area is: {screen_w}x{screen_h}")
         if not self.has_mode(screen_w, screen_h):
             self.add_screen_size(screen_w, screen_h, DEFAULT_REFRESH_RATE)
         self.set_screen_size(screen_w, screen_h)
@@ -1101,6 +1103,7 @@ cdef class RandRBindingsInstance(X11CoreBindingsInstance):
                 assert rsc.noutput>i
                 output = rsc.outputs[i]
                 log(f"{i}: crtc {crtc} and output {output}: {m}")
+                log.info(f"{i}: crtc {crtc} and output {output}: {m}")
                 crtc_info = XRRGetCrtcInfo(self.display, rsc, crtc)
                 if not crtc_info:
                     log.error(f"Error: crtc {i} not found ({crtc:#x})")
@@ -1115,6 +1118,7 @@ cdef class RandRBindingsInstance(X11CoreBindingsInstance):
                         #crtc is not enabled and the corresponding output is not connected,
                         #which is exactly what we want, so just leave it alone
                         log(f"crtc and output {i} are already disabled")
+                        log.info(f"crtc and output {i} are already disabled")
                         continue
                     noutput = 1
                     mode = 0
@@ -1126,9 +1130,11 @@ cdef class RandRBindingsInstance(X11CoreBindingsInstance):
                             primary = i
                         x, y, width, height = m["geometry"]
                         vrefresh = m.get("refresh-rate", DEFAULT_REFRESH_RATE)
+                        log.info(f"vrefresh={vrefresh}")
                         hz = round(vrefresh/1000)
                         mode_name = f"{width}x{height}@{hz}"
                         match_mode = self.calculate_mode(mode_name, width, height, vrefresh)
+                        log.info(f"mode_name={mode_name}, match_mode={match_mode}")
                         assert match_mode, "no mode to match"
                         #find an existing mode matching this resolution + vrefresh:
                         for j in range(output_info.nmode):
@@ -1144,6 +1150,8 @@ cdef class RandRBindingsInstance(X11CoreBindingsInstance):
                                     mode_name = bytestostr(rsc.modes[j].name)
                                     log("using existing output mode %r (%#x) for %ix%i",
                                         mode_name, mode, width, height)
+                                    log.info("using existing output mode %r (%#x) for %ix%i",
+                                        mode_name, mode, width, height)
                                     break
                             if mode:
                                 break
@@ -1158,6 +1166,8 @@ cdef class RandRBindingsInstance(X11CoreBindingsInstance):
                                     mode = rsc.modes[j].id
                                     mode_name = bytestostr(rsc.modes[j].name)
                                     log(f"using screen mode {mode_name!r} ({mode:#x}) for {width}x{height}")
+                                    log.info(f"using screen mode {mode_name!r} ({mode:#x}) for {width}x{height}")
+
                                     break
                             if not mode:
                                 #may have already been added:
@@ -1168,11 +1178,15 @@ cdef class RandRBindingsInstance(X11CoreBindingsInstance):
                             assert mode!=0, f"mode {width}x{height}@{hz} not found"
                             XRRAddOutputMode(self.display, output, mode)
                             log(f"mode {mode_name!r} ({mode:#x}) added to output {i} ({output})")
+                            log.info(f"mode {mode_name!r} ({mode:#x}) added to output {i} ({output})")
                         XRRFreeModeInfo(match_mode)
                     else:
                         noutput = 0
 
                     log("XRRSetCrtcConfig(%#x, %#x, %i, %i, %i, %i, %i, %i, %#x, %i)",
+                            <uintptr_t> self.display, <uintptr_t> rsc, crtc,
+                            CurrentTime, x, y, mode, RR_Rotate_0, <uintptr_t> &output, noutput)
+                    log.info("XRRSetCrtcConfig(%#x, %#x, %i, %i, %i, %i, %i, %i, %#x, %i)",
                             <uintptr_t> self.display, <uintptr_t> rsc, crtc,
                             CurrentTime, x, y, mode, RR_Rotate_0, <uintptr_t> &output, noutput)
                     r = XRRSetCrtcConfig(self.display, rsc, crtc,
@@ -1204,9 +1218,11 @@ cdef class RandRBindingsInstance(X11CoreBindingsInstance):
                         log.info(f" {width}x{height} {hz}Hz ({mmw}x{mmh} mm, {dpiinfo}){posinfo}")
                 finally:
                     if output_info:
+                        log.info(f"output_info={output_info}")
                         XRRFreeOutputInfo(output_info)
                         output_info = NULL
                     if crtc_info:
+                        log.info(f"crtc_info={crtc_info}")
                         XRRFreeCrtcInfo(crtc_info)
                         crtc_info = NULL
             self.XSync()
@@ -1216,12 +1232,14 @@ cdef class RandRBindingsInstance(X11CoreBindingsInstance):
                 log.error("Error: failed to retrieve the list of monitors")
                 return False
             log(f"got {nmonitors} monitors for {len(monitor_defs)} crtcs")
+            log.info(f"got {nmonitors} monitors for {len(monitor_defs)} crtcs")
             #start by removing the ones we don't use:
             try:
                 #we only need as many monitors as we have crtcs,
                 for mi in range(len(monitor_defs), nmonitors):
                     name_atom = monitors[mi].name
                     log(f"deleting monitor {mi}: %s", bytestostr(self.XGetAtomName(name_atom)))
+                    log.info(f"deleting monitor {mi}: %s", bytestostr(self.XGetAtomName(name_atom)))
                     XRRDeleteMonitor(self.display, window, name_atom)
             finally:
                 XRRFreeMonitors(monitors)
@@ -1247,10 +1265,12 @@ cdef class RandRBindingsInstance(X11CoreBindingsInstance):
                 for mi in range(nmonitors):
                     names[mi] = bytestostr(self.XGetAtomName(monitors[mi].name))
                 log(f"found {nmonitors} monitors still active: %s", csv(names.values()))
+                log.info(f"found {nmonitors} monitors still active: %s", csv(names.values()))
                 active_names = {}
                 mi = 0
                 for i, m  in monitor_defs.items():
                     log(f"matching monitor index {mi} to {i}: {m}")
+                    log.info(f"matching monitor index {mi} to {i}: {m}")
                     name = (prettify_plug_name(m.get("name", "")) or ("VFB-%i" % mi))
                     if name in output_names:
                         name = "VFB-%i" % mi
@@ -1272,6 +1292,10 @@ cdef class RandRBindingsInstance(X11CoreBindingsInstance):
                     monitor.outputs = &output
                     monitor.noutput = 1
                     log("XRRSetMonitor(%#x, %#x, %#x) output=%i, geometry=%s (%ix%i mm)",
+                        <uintptr_t> self.display, <uintptr_t> window, <uintptr_t> &monitor, output,
+                        (monitor.x, monitor.y, monitor.width, monitor.height),
+                        monitor.mwidth, monitor.mheight)
+                    log.info("XRRSetMonitor(%#x, %#x, %#x) output=%i, geometry=%s (%ix%i mm)",
                         <uintptr_t> self.display, <uintptr_t> window, <uintptr_t> &monitor, output,
                         (monitor.x, monitor.y, monitor.width, monitor.height),
                         monitor.mwidth, monitor.mheight)
