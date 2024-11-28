@@ -403,18 +403,22 @@ def set_initial_resolution(resolutions, dpi: int = 0) -> None:
         from xpra.x11.bindings.randr import RandRBindings
         # try to set a reasonable display size:
         randr = RandRBindings()
+        log("set_initial_resolution(), randr=%s", randr)
         if not randr.has_randr():
             log.warn("Warning: no RandR support,")
             log.warn(" default virtual display size unchanged")
             return
         if randr.is_dummy16():
+            log("set_initial_resolution(), randr.is_dummy16()=%s", randr.is_dummy16())
             monitors = {}
             x, y = 0, 0
+            log("set_initial_resolution(), resolutions=%s", resolutions)
             for i, res in enumerate(resolutions):
                 assert len(res) == 3
                 if not all(isinstance(v, int) for v in res):
                     raise ValueError(f"resolution values must be ints, found: {res} ({csv(type(v) for v in res)})")
                 w, h, hz = res
+                log("set_initial_resolution(), w,h,hr=%s", res)
                 mdpi = dpi
                 # guess the DPI if we don't have one:
                 if mdpi <= 0:
@@ -425,9 +429,11 @@ def set_initial_resolution(resolutions, dpi: int = 0) -> None:
                         mdpi = 120
                     else:
                         mdpi = 96
-
+                log("set_initial_resolution(), mdpi=%s", mdpi)
                 def rdpi(v: int) -> int:
+                    log("set_initial_resolution(), rdpi=%s", round(v * 25.4 / mdpi))
                     return round(v * 25.4 / mdpi)
+                
                 monitors[i] = {
                     "name": f"VFB-{i}",
                     "primary": i == 0,
@@ -440,6 +446,7 @@ def set_initial_resolution(resolutions, dpi: int = 0) -> None:
                 x += w
                 # arranging vertically:
                 # y += h
+            log("set_initial_resolution(), set_crtc_config=%s", monitors)
             randr.set_crtc_config(monitors)
             return
         res = resolutions[0][:2]
