@@ -1219,7 +1219,6 @@ cdef class RandRBindingsInstance(X11CoreBindingsInstance):
                         log.info(f" {width}x{height} {hz}Hz ({mmw}x{mmh} mm, {dpiinfo}){posinfo}")
                 finally:
                     if output_info:
-                        log.info(f"output_info={output_info}")
                         XRRFreeOutputInfo(output_info)
                         output_info = NULL
                     if crtc_info:
