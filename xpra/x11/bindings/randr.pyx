@@ -1067,6 +1067,7 @@ cdef class RandRBindingsInstance(X11CoreBindingsInstance):
         self.xrr_set_screen_size(screen_w, screen_h, dpi96(screen_w), dpi96(screen_h))
         root_w, root_h = self.get_screen_size()
         log(f"root size is now: {root_w}x{root_h}")
+        log.info(f"root size is now: {root_w}x{root_h}")
         count = len(monitor_defs)
         cdef Window window = XDefaultRootWindow(self.display)
         cdef XRRScreenResources *rsc = XRRGetScreenResourcesCurrent(self.display, window)
@@ -1222,7 +1223,6 @@ cdef class RandRBindingsInstance(X11CoreBindingsInstance):
                         XRRFreeOutputInfo(output_info)
                         output_info = NULL
                     if crtc_info:
-                        log.info(f"crtc_info={crtc_info}")
                         XRRFreeCrtcInfo(crtc_info)
                         crtc_info = NULL
             self.XSync()
