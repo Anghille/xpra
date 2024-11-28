@@ -41,6 +41,7 @@ class XpraDesktopServer(DesktopServerBase):
         super().server_init()
         from xpra.x11.vfb_util import set_initial_resolution, get_desktop_vfb_resolutions
         screenlog(f"server_init() randr={self.randr}, initial-resolutions={self.initial_resolutions}")
+        screenlog(f"server_init() randr={self.randr}, features.display={features.display},py-type={type(features.display)}")
         if not features.display:
             return
         res = self.initial_resolutions or get_desktop_vfb_resolutions(default_refresh_rate=self.refresh_rate)
