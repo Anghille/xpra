@@ -204,6 +204,7 @@ class DesktopModelBase(WindowModelStub, WindowDamageHandler):
             return
         # FIXME: small race if the user resizes with randr,
         # at the same time as he resizes the window..
+        geomlog("Maybe RACE condition here ?")
         self.resize_value = (w, h)
         if not self.resize_timer:
             self.resize_timer = GLib.timeout_add(250, self.do_resize)

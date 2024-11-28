@@ -146,7 +146,9 @@ class ScreenDesktopModel(DesktopModelBase):
             })
 
         if RandR.has_randr():
+            screenlog("ScreenDesktopModel.update_size_hints.Randr.hasrandr()=%s, %s",  RandR.has_randr(), RandR)
             if self.resize_exact:
+                screenlog("resize_exact()=%s", self.resize_exact)
                 # assume resize_exact is enabled
                 # no size restrictions
                 size_hints = {}
@@ -154,10 +156,12 @@ class ScreenDesktopModel(DesktopModelBase):
                 try:
                     with xsync:
                         screen_sizes = RandR.get_xrr_screen_sizes()
+                        screenlog("xsync.screen_sizes=%s", screen_sizes)
                 except XError:
                     screenlog("failed to query screen sizes", exc_info=True)
                 else:
                     if not screen_sizes:
+                        screenlog("using use_fixed_size() with w=%s, h=%s", w, h)
                         use_fixed_size()
                     else:
                         size_hints |= get_legacy_size_hints(screen_sizes)
